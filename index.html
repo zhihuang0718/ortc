@@ -75,19 +75,21 @@
     (<a href="#quic-transport*">Section 13</a>) utilizes an
     <code><a>RTCIceTransport</a></code> to select a communication path to reach the
     receiving peer's <code><a>RTCIceTransport</a></code>, which is in turn associated
-    with an <code><a>RTCQuicTransport</a></code>.</p>
+    with an <code><a>RTCQuicTransport</a></code>. The <code><a>RTCQuicStream</a></code>
+    created by <code><a> RTCQuicTransport</a></code> is described in
+    <a href="#quic-stream*">Section 14</a>.</p>
     <p>Remaining sections of the specification fill in details relating to RTP
     capabilities and parameters, operational statistics, media authentication via
     Certificates and Identity Providers (IdP) and compatibility with the WebRTC 1.0 API.
     RTP dictionaries are described in <a href="#rtcrtpdictionaries*">Section 9</a>, the
-    Statistics API is described in <a href="#statistics-api">Section 14</a>, the Identity
-    API is described in <a href="#identity-api">Section 15</a>, the Certificate API is
-    described in <a href="#certificate-api">Section 16</a>, privacy and security
-    considerations are described in <a href="#privacy-security">Section 17</a>,
+    Statistics API is described in <a href="#statistics-api">Section 15</a>, the Identity
+    API is described in <a href="#identity-api">Section 16</a>, the Certificate API is
+    described in <a href="#certificate-api">Section 17</a>, privacy and security
+    considerations are described in <a href="#privacy-security">Section 18</a>,
     an event summary is provided
-    in <a href="#event-summary">Section 18</a>, WebRTC 1.0 compatibility issues are
-    discussed in <a href="#webrtc-compat*">Section 19</a>, and complete examples are
-    provided in <a href="#examples*">Section 20</a>.</p>
+    in <a href="#event-summary">Section 19</a>, WebRTC 1.0 compatibility issues are
+    discussed in <a href="#webrtc-compat*">Section 20</a>, and complete examples are
+    provided in <a href="#examples*">Section 21</a>.</p>
     <section id="conformance">
       <p>This specification defines conformance criteria that apply to a single
       product: the <a>user agent</a> that implements the interfaces that it
@@ -118,7 +120,7 @@
       <code><a>RTCIceTransportController</a></code> (<a href="#rtcicetransportcontroller*">Section 7</a>),
       <code><a>RTCRtpListener</a></code> (<a href="#rtcrtplistener*">Section 8</a>),
       <code><a>RTCQuicTransport</a></code> (<a href="#quic-transport*">Section 13</a>) and
-      <code><a>RTCIdentity</a></code> (<a href="#identity-api">Section 15</a>).       
+      <code><a>RTCIdentity</a></code> (<a href="#identity-api">Section 16</a>).
     </section>
     <section>
       <h3>Terminology</h3>
@@ -8599,12 +8601,12 @@ function accept(mySignaller, remote) {
     <section id="rtcquictransport-overview*">
       <h3>Overview</h3>
       <p>An <code><a>RTCQuicTransport</a></code> instance is associated to
-      an <code>RTCQuicStream</code> instance.</p>
+      an <code><a>RTCQuicStream</a></code> instance.</p>
     </section>
     <section id="rtcquictransport-operation*">
       <h3>Operation</h3>
       <p>The QUIC protocol is described in [[!QUIC-TRANSPORT]].
-      A <code><a>RTCQuicTransport</a></code> instance is constructed
+      An <code><a>RTCQuicTransport</a></code> instance is constructed
       using an <code><a>RTCIceTransport</a></code> and a sequence of
       <code><a>RTCCertificate</a></code> objects.
       An <code><a>RTCQuicTransport</a></code> object in the <code>closed</code> or
@@ -8640,16 +8642,17 @@ function accept(mySignaller, remote) {
       <h3>Interface Definition</h3>
       <div>
         <pre class="idl">
-        [ Constructor (RTCceTransport transport, sequence&lt;RTCCertificate&gt; certificates), Exposed=Window]
+        [ Constructor (RTCIceTransport transport, sequence&lt;RTCCertificate&gt; certificates), Exposed=Window]
 interface RTCQuicTransport {
     readonly        attribute RTCIceTransport          transport;
     readonly        attribute RTCQuicTransportState    state;
     RTCQuicParameters     getLocalParameters ();
-    RTCQuicParameters?    getRemoteParameters ();
+    RTCQuicParameters     getRemoteParameters ();
     sequence&lt;RTCCertificate&gt; getCertificates ();
     sequence&lt;ArrayBuffer&gt; getRemoteCertificates ();
     void                  start (RTCQuicParameters remoteParameters);
     void                  stop ();
+    RTCQuicStream         createStream ();
                     attribute EventHandler             onstatechange;
                     attribute EventHandler             onerror;
 };</pre>
@@ -8722,6 +8725,12 @@ interface RTCQuicTransport {
               error; an implementation <em class="rfc2119" title=
               "SHOULD">SHOULD</em> include QUIC error information in
               <var>error.message</var> (defined in [[!HTML5]] Section 6.1.3.6.2).</p>
+            </dd>
+             <dt><dfn><code>onstream</code></dfn> of type <span class=
+            "idlAttrType"><a>EventHandler</a></span></dt>
+            <dd>
+              <p>This event handler, of event handler event type <code>stream</code>,
+              <em class="rfc2119" title="MUST">MUST</em> be fired on reception of new incoming stream from the remote side.</p>
             </dd>
           </dl>
         </section>
@@ -8838,6 +8847,16 @@ interface RTCQuicTransport {
               </div>
               <div>
                 <em>Return type:</em> <code>void</code>
+              </div>
+            </dd>
+            <dt><dfn><code>createStream</code></dfn></dt>
+            <dd>
+              <p>Create an <code><a>RTCQuicStream</a></code> instance with a QUIC stream underneath.
+              <div>
+                <em>No parameters.</em>
+              </div>
+              <div>
+                <em>Return type:</em> <code><a>RTPQuicStream</a></code>
               </div>
             </dd>
           </dl>
@@ -9140,6 +9159,252 @@ function accept(mySignaller, remote) {
 
 }
                 </pre>
+    </section>
+  </section>
+  <section id="quic-stream*">
+    <h2><dfn>RTCQuicStream</dfn> Interface</h2>
+    <p>The <code>RTCQuicStream</code> includes information relating
+    to QUIC stream.</p>
+    <section id="rtcquicstream-overview*">
+      <h3>Overview</h3>
+      <p>An <code><a>RTCQuicStream</a></code> instance is associated to
+      an <code><a>RTCQuicTransport</a></code> instance.</p>
+    </section>
+    <section id="rtcquicstream-operation*">
+      <h3>Operation</h3>
+      An <code><a>RTCQuicStream</a></code> instance is created by the
+      <code><a>RTCQuicTransport</a></code> with a QUIC stream underneath.
+      When writing, the <code><a>RTCQuicStream</a></code>  will buffer
+      the data if the transport underneath is not writable. When receiving,
+      the received data will be buffered and methods <code>read()</code>
+      and <code>readInto()</code> read the data from the buffer.</p>
+    </section>
+    <section id="rtcquicstream-interface-definition*">
+      <h3>Interface Definition</h3>
+      <div>
+        <pre class="idl">
+interface RTCQuicStream {
+    void                  write(Uint8Array data);
+    void                  finish(optional Uint8Array data);
+    Promise&lt;void&gt;   waitForWritable(unsigned long amount,
+                                          optional unsigned long maxBufferedAmount);
+    Uint8Array            read();
+    void                  readInto(Uint8Array data);
+    Promise&lt;void&gt;   waitForReadableOrFinished(unsigned long amount,
+                                                    optional unsigned long maxBufferedAmount);
+    void                  close();
+                        attribute EventHandler             onacked;
+                        attribute EventHandler             onclosed;
+};</pre>
+      </div>
+    </section>
+    <section>
+      <h2>Attributes</h2>
+      <dl data-link-for="RTCQuicStream" data-dfn-for="RTCQuicStream" class=
+      "attributes">
+        <dt><dfn><code>onacked</code></dfn> of type <span class=
+        "idlAttrType"><a>EventHandler</a></span></dt>
+        <dd>
+          <p>This event handler, of event handler event type
+          <code><a>acked</a></code>, <em class="rfc2119" title="MUST">MUST</em>
+          be fired on reception of an ACK from the remote side.</p>
+        </dd>
+        <dt><dfn><code>onclosed</code></dfn> of type <span class=
+        "idlAttrType"><a>EventHandler</a></span></dt>
+        <dd>
+          <p>This event handler, of event handler event type <code>closed</code>,
+          <em class="rfc2119" title="MUST">MUST</em> be fired when the stream is
+          closed by either side.</p>
+        </dd>
+      </dl>
+    </section>
+    <section>
+      <h2>Methods</h2>
+      <dl data-link-for="RTCQuicStream" data-dfn-for="RTCQuicStream" class=
+      "methods">
+        <dt><code>write</code></dt>
+        <dd>
+          <p><dfn>write()</dfn> writes the data to local buffer and send the data when the
+          transport underneath is writeable. If the buffer is full, it will fail.</p>
+          <table class = "parameters">
+            <tbody>
+              <tr>
+                <th>Parameter</th>
+                <th>Type</th>
+                <th>Nullable</th>
+                <th>Optional</th>
+                <th>Description</th>
+              </tr>
+              <tr>
+                <td class="prmName">data</td>
+                <td class="prmType"><code>Uint8Array</code></td>
+                <td class="prmNullFalse"><span role="img" aria-label=
+                "False">&#10008;</span></td>
+                <td class="prmOptFalse"><span role="img" aria-label=
+                "False">&#10008;</span></td>
+                <td class="prmDesc"></td>
+              </tr>
+            </tbody>
+          </table>
+          <div>
+            <em>Return type:</em> <code>void</code>
+          </div>
+        </dd>
+        <dt><code>finish</code></dt>
+        <dd>
+          <p><dfn>finish()</dfn> will maybe wirte one last value before finishing and then a "fin" bit.
+          <table class = "parameters">
+            <tbody>
+              <tr>
+                <th>Parameter</th>
+                <th>Type</th>
+                <th>Nullable</th>
+                <th>Optional</th>
+                <th>Description</th>
+              </tr>
+              <tr>
+                <td class="prmName">data</td>
+                <td class="prmType"><code>Uint8Array</code></td>
+                <td class="prmNullFalse"><span role="img" aria-label=
+                "False">&#10008;</span></td>
+                <td class="prmOptTrue"><span role="img" aria-label=
+                "True">&#10004;</span></td>
+                <td class="prmDesc"></td>
+              </tr>
+            </tbody>
+          </table>
+          <div>
+            <em>Return type:</em> <code>void</code>
+          </div>
+        </dd>
+        <dt><code>waitForWritable</code></dt>
+        <dd>
+          <p><dfn>waitForWritable()</dfn> will be resolved when the amount, up to maxBufferedAmount,
+          can be written or buffered. If the maxBufferedAmount is not provided, it will be equal
+          to the amount.</p>
+          <table class = "parameters">
+            <tbody>
+              <tr>
+                <th>Parameter</th>
+                <th>Type</th>
+                <th>Nullable</th>
+                <th>Optional</th>
+                <th>Description</th>
+              </tr>
+              <tr>
+                <td class="prmName">amount</td>
+                <td class="prmType"><code>unsigned long</code></td>
+                <td class="prmNullFalse"><span role="img" aria-label=
+                "False">&#10008;</span></td>
+                <td class="prmOptFalse"><span role="img" aria-label=
+                "False">&#10008;</span></td>
+                <td class="prmDesc"></td>
+              </tr>
+              <tr>
+                <td class="prmName">maxBufferedAmount</td>
+                <td class="prmType"><code>unsigned long</code></td>
+                <td class="prmNullFalse"><span role="img" aria-label=
+                "False">&#10008;</span></td>
+                <td class="prmOptTrue"><span role="img" aria-label=
+                "True">&#10004;</span></td>
+                <td class="prmDesc"></td>
+              </tr>
+            </tbody>
+          </table>
+          <div>
+            <em>Return type:</em> <code>Promise&lt;void&gt;</code>
+          </div>
+        </dd>
+        <dt><code>read</code></dt>
+        <dd>
+          <p><dfn>read()</dfn> reads all the data that is in the buffer.
+          <div>
+            <em>No parameters.</em>
+          </div>
+          <div>
+            <em>Return type:</em> <code>Uint8Array</code>
+          </div>
+        </dd>
+        <dt><code>readInto</code></dt>
+        <dd>
+          <p><dfn>readInto()</dfn> fills the array exactly from the read buffer. If that amount
+            is not available, it will fail.
+          <table class = "parameters">
+            <tbody>
+              <tr>
+                <th>Parameter</th>
+                <th>Type</th>
+                <th>Nullable</th>
+                <th>Optional</th>
+                <th>Description</th>
+              </tr>
+              <tr>
+                <td class="prmName">data</td>
+                <td class="prmType"><code>Uint8Array</code></td>
+                <td class="prmNullFalse"><span role="img" aria-label=
+                "False">&#10008;</span></td>
+                <td class="prmOptFalse"><span role="img" aria-label=
+                "False">&#10008;</span></td>
+                <td class="prmDesc"></td>
+              </tr>
+            </tbody>
+          </table>
+          <div>
+            <em>Return type:</em> <code>void</code>
+          </div>
+        </dd>
+        <dt><code>waitForReadableOrFinished</code></dt>
+        <dd>
+          <p><dfn>waitForReadableOrFinished()</dfn> will be resolved when the amount, up to
+          maxBufferedAmount, can be read. If the maxBufferedAmount is not provided, it will
+           be equal to the amount.</p>
+          <table class = "parameters">
+            <tbody>
+              <tr>
+                <th>Parameter</th>
+                <th>Type</th>
+                <th>Nullable</th>
+                <th>Optional</th>
+                <th>Description</th>
+              </tr>
+              <tr>
+                <td class="prmName">amount</td>
+                <td class="prmType"><code>unsigned long</code></td>
+                <td class="prmNullFalse"><span role="img" aria-label=
+                "False">&#10008;</span></td>
+                <td class="prmOptFalse"><span role="img" aria-label=
+                "False">&#10008;</span></td>
+                <td class="prmDesc"></td>
+              </tr>
+              <tr>
+                <td class="prmName">maxBufferedAmount</td>
+                <td class="prmType"><code>unsigned long</code></td>
+                <td class="prmNullFalse"><span role="img" aria-label=
+                "False">&#10008;</span></td>
+                <td class="prmOptTrue"><span role="img" aria-label=
+                "True">&#10004;</span></td>
+                <td class="prmDesc"></td>
+              </tr>
+            </tbody>
+          </table>
+          <div>
+            <em>Return type:</em> <code>Promise&lt;void&gt;</code>
+          </div>
+        </dd>
+        <dt><code>close</code></dt>
+        <dd>
+          <p><dfn>close()</dfn> on either side triggers <code><a>onclosed</a></code> on both
+            sides. Once the stream is closed, all future reads and writes will fail. Nothing
+             will be sent or received any longer and everything buffered will be thrown away.
+              Closing an already closed stream does nothing.
+          <div>
+            <em>No parameters.</em>
+          </div>
+          <div>
+            <em>Return type:</em> <code>void</code>
+          </div>
+        </dd>
+      </dl>
     </section>
   </section>
   <section>
@@ -10322,6 +10587,33 @@ function signalAssertion(assertion) {
           <td><code>statechange</code></td>
           <td><code><a>Event</a></code></td>
           <td>The <code><a>RTCQuicTransportState</a></code> changed.</td>
+        </tr>
+        <tr>
+          <td><code>stream</code></td>
+          <td><code><a>Event</a></code></td>
+          <td>Received a new incoming <code><a>RTCQuicStream</a></code>.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>The following events fire on <code><a>RTCQuicStream</a></code> objects:</p>
+    <table style="border-width:0; width:60%" border="1">
+      <tbody>
+        <tr>
+          <th>Event name</th>
+          <th>Interface</th>
+          <th>Fired when...</th>
+        </tr>
+      </tbody>
+      <tbody>
+        <tr>
+          <td><code>ack</code></td>
+          <td><code><a>Event</a></code></td>
+          <td>Received an ACK from the remote side</td>
+        </tr>
+        <tr>
+          <td><code>closed</code></td>
+          <td><code><a>Event</a></code></td>
+          <td>The <code><a>RTCQuicStream</a></code> is closed by either side.</td>
         </tr>
       </tbody>
     </table>
